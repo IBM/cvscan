@@ -1,0 +1,21 @@
+language: go
+go:
+  - "1.13.x"
+
+script:
+  - make build test
+
+before_deploy:
+  - make binaries
+  - sha256sum cvscan-*.tar.gz > checksums.sha256
+
+deploy:
+  - provider: releases
+    api_key: $GITHUB_TOKEN
+    file_glob: true
+    file:
+      - checksums.sha256
+      - cvscan-*.tar.gz
+    skip_cleanup: true
+    on:
+      tags: true

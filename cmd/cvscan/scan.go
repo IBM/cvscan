@@ -61,27 +61,31 @@ func (sCmd *scanCmd) run(args []string) error {
 
 	config, err := sCmd.getClusterConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("getting config: %v", err)
 	}
 
 	s, err := scan.New(config, sCmd.clusterWideOnly)
 	if err != nil {
-		return err
+		return fmt.Errorf("initialize scanner: %v", err)
 	}
 
 	if sCmd.extra {
 		err := s.ListAll("", sCmd.opts, outputPath)
 		if err != nil {
-			return err
+			return fmt.Errorf("listing resources with options: %v", err)
 		}
 
 		err = s.ListAll(sCmd.configOverrides.Context.Namespace, metav1.ListOptions{}, outputPath)
 		if err != nil {
-			return err
+			return fmt.Errorf("listing resources in namespace: %v", err)
 		}
 	}
 
-	return s.ListAll(sCmd.configOverrides.Context.Namespace, sCmd.opts, outputPath)
+	err = s.ListAll(sCmd.configOverrides.Context.Namespace, sCmd.opts, outputPath)
+	if err != nil {
+		return fmt.Errorf("listing resources: %v", err)
+	}
+	return nil
 }
 
 func (sCmd *scanCmd) getClusterConfig() (*rest.Config, error) {

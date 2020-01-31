@@ -47,12 +47,12 @@ func New(config *rest.Config, clusterWideOnly bool) (*Scanner, error) {
 
 	s.clientset, err = kubernetes.NewForConfig(s.config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating kube client: %v", err)
 	}
 
 	s.resourceClients, err = s.getAllResources()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting resource clients: %v", err)
 	}
 
 	return s, nil
@@ -61,7 +61,7 @@ func New(config *rest.Config, clusterWideOnly bool) (*Scanner, error) {
 func (s *Scanner) ListAll(namespace string, opts metav1.ListOptions, outDir string) error {
 	err := os.MkdirAll(outDir, os.ModePerm)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating output directory: %v", err)
 	}
 
 	// kubectl get po -o jsonpath='{range .items[*]}{range .metadata.ownerReferences[*]}{"\""}{.kind}{"\",\n"}{end}{end}' --all-namespaces | sort | uniq
@@ -90,7 +90,7 @@ func (s *Scanner) ListAll(namespace string, opts metav1.ListOptions, outDir stri
 		err := req.Do().Into(l)
 
 		if err != nil && !errors.IsNotFound(err) && !errors.IsMethodNotSupported(err) {
-			return err
+			return fmt.Errorf("listing %s: %v", name, err)
 		}
 
 		if len(l.Items) == 0 {
@@ -99,9 +99,11 @@ func (s *Scanner) ListAll(namespace string, opts metav1.ListOptions, outDir stri
 
 	outer:
 		for _, item := range l.Items {
+			key := "scanned-" + strings.ToLower(item.GetObjectKind().GroupVersionKind().Kind) + "-" + item.GetNamespace() + "-" + item.GetName() + ".yaml"
+
 			y, err := yaml.Marshal(item.Object)
 			if err != nil {
-				return err
+				return fmt.Errorf("creating YAML for %s: %v", key, err)
 			}
 
 			kind := item.GetObjectKind().GroupVersionKind().Kind
@@ -123,8 +125,6 @@ func (s *Scanner) ListAll(namespace string, opts metav1.ListOptions, outDir stri
 				continue
 			}
 
-			key := "scanned-" + strings.ToLower(item.GetObjectKind().GroupVersionKind().Kind) + "-" + item.GetNamespace() + "-" + item.GetName() + ".yaml"
-
 			err = ioutil.WriteFile(filepath.Join(outDir, key), y, os.ModePerm)
 			if err != nil {
 				return err
@@ -134,7 +134,7 @@ func (s *Scanner) ListAll(namespace string, opts metav1.ListOptions, outDir stri
 
 	c, err := s.getCapabilities()
 	if err != nil {
-		return err
+		return fmt.Errorf("reading cluster capabilities: %v", err)
 	}
 
 	var release string
@@ -152,7 +152,7 @@ func (s *Scanner) ListAll(namespace string, opts metav1.ListOptions, outDir stri
 
 	b, err := json.MarshalIndent(caps, "", "  ")
 	if err != nil {
-		return err
+		return fmt.Errorf("marshaling capabilities to JSON: %v", err)
 	}
 	if err := ioutil.WriteFile(filepath.Join(outDir, "caps.json"), b, os.ModePerm); err != nil {
 		return err
@@ -170,7 +170,7 @@ func (s *Scanner) getAllResources() (map[string]*rest.RESTClient, error) {
 			fmt.Println("Failed to get server API", group)
 		}
 	} else if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("fetching server API resources: %v", err)
 	}
 
 	// Add extra types to scheme
@@ -202,7 +202,7 @@ func (s *Scanner) getAllResources() (map[string]*rest.RESTClient, error) {
 
 		c, err := rest.RESTClientFor(&config)
 		if err != nil {
-			log.Println("Error creating REST client:", err)
+			log.Println("creating REST client:", err)
 			continue
 		}
 
@@ -227,24 +227,24 @@ func (s *Scanner) getAllResources() (map[string]*rest.RESTClient, error) {
 	return resources, nil
 }
 
-func (s *Scanner) getCapabilities() (c *chartutil.Capabilities, err error) {
+func (s *Scanner) getCapabilities() (*chartutil.Capabilities, error) {
 	// Copied from k8s.io/helm/pkg/tiller/release_server.go
 
-	c = &chartutil.Capabilities{}
+	c := &chartutil.Capabilities{}
 
 	sv, err := s.clientset.ServerVersion()
 	if err != nil {
-		return
+		return c, fmt.Errorf("server version: %v", err)
 	}
 	c.KubeVersion = sv
 
 	groups, err := s.clientset.ServerGroups()
 	if err != nil {
-		return
+		return c, fmt.Errorf("server groups: %v", err)
 	}
 
 	if groups.Size() == 0 {
-		return
+		return c, nil
 	}
 
 	versions := metav1.ExtractGroupVersions(groups)
@@ -271,12 +271,12 @@ func (s *Scanner) getCapabilities() (c *chartutil.Capabilities, err error) {
 		cmd.Stdout = &out
 		err = cmd.Run()
 		if err != nil {
-			return
+			return c, fmt.Errorf("tiller version: %v", err)
 		}
 	}
 	c.TillerVersion = &version.Version{
 		SemVer: out.String(),
 	}
 
-	return
+	return c, nil
 }

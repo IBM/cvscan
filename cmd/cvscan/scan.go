@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -9,6 +10,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.ibm.com/certauto/cvscan/internal/scan"
+	"github.ibm.com/certauto/cvscan/pkg/version"
 )
 
 type scanCmd struct {
@@ -17,6 +19,7 @@ type scanCmd struct {
 	clusterWideOnly bool
 	configOverrides clientcmd.ConfigOverrides
 	kubeconfig      string
+	version         bool
 }
 
 func newScanCmd() *cobra.Command {
@@ -35,6 +38,7 @@ func newScanCmd() *cobra.Command {
 	flags.StringVar(&s.opts.FieldSelector, "field-selector", "", "Selector (field query) to filter on")
 	flags.StringVar(&s.kubeconfig, "kubeconfig", "", "Path to the kubeconfig file to use for CLI requests")
 	flags.BoolVar(&s.clusterWideOnly, "cluster-wide-only", false, "ignore all namespace-scoped resources")
+	flags.BoolVar(&s.version, "version", false, "print version information and exit")
 
 	flags.BoolVar(&s.extra, "extra", false, "Flag to enable collecting extra resources")
 	flags.MarkHidden("extra")
@@ -45,6 +49,11 @@ func newScanCmd() *cobra.Command {
 }
 
 func (sCmd *scanCmd) run(args []string) error {
+	if sCmd.version {
+		fmt.Println(version.Version())
+		return nil
+	}
+
 	if len(args) == 0 {
 		return errors.New("output_path argument is required")
 	}

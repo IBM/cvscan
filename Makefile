@@ -1,12 +1,16 @@
 all: build
 
+VERSION=$(shell git describe --tags | sed "s/\(-[[:digit:]]\{1,\}\)-[[:alnum:]]\{1,\}$$/\1/" | sed "s/-0$$//")
+VER_PKG=$(shell go list -m)/pkg/version
+LDFLAGS += -ldflags "-X ${VER_PKG}.version=${VERSION}"
+
 .PHONY: build
 build:
-	CGO_ENABLED=0 go build ./cmd/...
+	CGO_ENABLED=0 go build ${LDFLAGS} ./cmd/...
 
 .PHONY: install
 install:
-	CGO_ENABLED=0 go install ./cmd/...
+	CGO_ENABLED=0 go install ${LDFLAGS} ./cmd/...
 
 .PHONY: vet
 vet:

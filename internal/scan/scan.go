@@ -89,7 +89,9 @@ func (s *Scanner) ListAll(namespace string, opts metav1.ListOptions, outDir stri
 
 		err := req.Do().Into(l)
 
-		if err != nil && !errors.IsNotFound(err) && !errors.IsMethodNotSupported(err) {
+		// Ignore MCM resource errors because they require an additional secret
+		// to be provided in the request.
+		if err != nil && !errors.IsNotFound(err) && !errors.IsMethodNotSupported(err) && !((errors.IsBadRequest(err) || errors.IsServiceUnavailable(err)) && strings.HasSuffix(client.APIVersion().Group, ".clusterapi.io")) {
 			return fmt.Errorf("listing %s: %v", name, err)
 		}
 

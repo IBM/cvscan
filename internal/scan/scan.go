@@ -254,26 +254,27 @@ func (s *Scanner) getCapabilities() (*chartutil.Capabilities, error) {
 	c.APIVersions = vs
 
 	// Fail fast if Tiller doesn't exist because `helm version` hangs.
-	lsc := exec.Command("helm", "ls")
+	lsc := exec.Command("helm", "ls", "--tls")
 	err = lsc.Run()
 	if err != nil {
-		lsc := exec.Command("helm", "ls", "--tls")
+		lsc := exec.Command("helm", "ls")
 		err = lsc.Run()
 		if err != nil {
 			return c, nil
 		}
 	}
 
-	cmd := exec.Command("helm", "version", "-s", "--template", "{{.Server.SemVer}}")
+	cmd := exec.Command("helm", "version", "--tls", "-s", "--template", "{{.Server.SemVer}}")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err = cmd.Run()
 	if err != nil {
-		cmd = exec.Command("helm", "version", "--tls", "-s", "--template", "{{.Server.SemVer}}")
+		cmd = exec.Command("helm", "version", "-s", "--template", "{{.Server.SemVer}}")
 		cmd.Stdout = &out
 		err = cmd.Run()
 		if err != nil {
-			return c, fmt.Errorf("tiller version: %v", err)
+			log.Println("error getting tiller version")
+			return c, nil
 		}
 	}
 	c.TillerVersion = &version.Version{

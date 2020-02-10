@@ -29,5 +29,4 @@ require (
 	k8s.io/client-go v0.0.0-20181205110444-5e6a3d4e34f6
 	k8s.io/helm v2.16.1+incompatible
 	k8s.io/kube-aggregator v0.0.0-20181217192238-e95ebe3de8a2
-	k8s.io/utils v0.0.0-20191114200735-6ca3b61696b6 // indirect
 )

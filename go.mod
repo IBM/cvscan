@@ -5,6 +5,8 @@ go 1.13
 replace golang.org/x/net => golang.org/x/net v0.0.0-20190724013045-ca1201d0de80
 
 require (
+	github.com/Azure/go-autorest/autorest v0.10.1 // indirect
+	github.com/Azure/go-autorest/autorest/adal v0.8.3 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.2 // indirect
 	github.com/ghodss/yaml v1.0.0
@@ -13,6 +15,7 @@ require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/google/btree v1.0.0 // indirect
 	github.com/googleapis/gnostic v0.3.1 // indirect
+	github.com/gophercloud/gophercloud v0.10.0 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/json-iterator/go v1.1.8 // indirect

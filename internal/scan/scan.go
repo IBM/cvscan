@@ -282,7 +282,7 @@ func (s *Scanner) getCapabilities() (*chartutil.Capabilities, error) {
 		cmd.Stdout = &out
 		err = cmd.Run()
 		if err != nil {
-			log.Println("Info: Tiller capability not detected (cvscan)")
+			log.Println("Info: Tiller is unavailable in this cluster, so the Tiller version cannot be determined (cvscan)")
 			return c, nil
 		}
 	}

@@ -59,11 +59,36 @@ func New(config *rest.Config, clusterWideOnly bool) (*Scanner, error) {
 	return s, nil
 }
 
-func (s *Scanner) ListAll(namespace string, opts metav1.ListOptions, outDir string) error {
-	err := os.MkdirAll(outDir, os.ModePerm)
+func (s *Scanner) WriteCaps(namespace string, opts metav1.ListOptions, outDir string) error {
+	c, err := s.getCapabilities()
 	if err != nil {
-		return fmt.Errorf("creating output directory: %v", err)
+		return fmt.Errorf("reading cluster capabilities: %v", err)
 	}
+
+	var release string
+	re := regexp.MustCompile(`release=(.*?)(,|\z)`)
+	m := re.FindStringSubmatch(opts.LabelSelector)
+	if len(m) > 1 {
+		release = m[1]
+	}
+
+	caps := struct {
+		Capabilities *chartutil.Capabilities `json:"capabilities"`
+		Namespace    string                  `json:"namespace"`
+		ReleaseName  string                  `json:"releaseName"`
+	}{c, namespace, release}
+
+	b, err := json.MarshalIndent(caps, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshaling capabilities to JSON: %v", err)
+	}
+	if err := ioutil.WriteFile(filepath.Join(outDir, "caps.json"), b, os.ModePerm); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Scanner) ListAll(namespace string, opts metav1.ListOptions, outDir string) error {
 
 	// kubectl get po -o jsonpath='{range .items[*]}{range .metadata.ownerReferences[*]}{"\""}{.kind}{"\",\n"}{end}{end}' --all-namespaces | sort | uniq
 	ownedKindsToSkip := map[string]*stringset.StringSet{
@@ -141,32 +166,6 @@ func (s *Scanner) ListAll(namespace string, opts metav1.ListOptions, outDir stri
 				return err
 			}
 		}
-	}
-
-	c, err := s.getCapabilities()
-	if err != nil {
-		return fmt.Errorf("reading cluster capabilities: %v", err)
-	}
-
-	var release string
-	re := regexp.MustCompile(`release=(.*?)(,|\z)`)
-	m := re.FindStringSubmatch(opts.LabelSelector)
-	if len(m) > 1 {
-		release = m[1]
-	}
-
-	caps := struct {
-		Capabilities *chartutil.Capabilities `json:"capabilities"`
-		Namespace    string                  `json:"namespace"`
-		ReleaseName  string                  `json:"releaseName"`
-	}{c, namespace, release}
-
-	b, err := json.MarshalIndent(caps, "", "  ")
-	if err != nil {
-		return fmt.Errorf("marshaling capabilities to JSON: %v", err)
-	}
-	if err := ioutil.WriteFile(filepath.Join(outDir, "caps.json"), b, os.ModePerm); err != nil {
-		return err
 	}
 
 	return nil

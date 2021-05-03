@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -59,6 +60,11 @@ func (sCmd *scanCmd) run(args []string) error {
 	}
 	outputPath := args[0]
 
+	err := os.MkdirAll(outputPath, os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("creating output directory: %v", err)
+	}
+
 	config, err := sCmd.getClusterConfig()
 	if err != nil {
 		return fmt.Errorf("getting config: %v", err)
@@ -67,6 +73,11 @@ func (sCmd *scanCmd) run(args []string) error {
 	s, err := scan.New(config, sCmd.clusterWideOnly)
 	if err != nil {
 		return fmt.Errorf("initialize scanner: %v", err)
+	}
+
+	err = s.WriteCaps(sCmd.configOverrides.Context.Namespace, sCmd.opts, outputPath)
+	if err != nil {
+		return fmt.Errorf("writing capabilities: %v", err)
 	}
 
 	if sCmd.extra {
@@ -79,11 +90,11 @@ func (sCmd *scanCmd) run(args []string) error {
 		if err != nil {
 			return fmt.Errorf("listing resources in namespace: %v", err)
 		}
-	}
-
-	err = s.ListAll(sCmd.configOverrides.Context.Namespace, sCmd.opts, outputPath)
-	if err != nil {
-		return fmt.Errorf("listing resources: %v", err)
+	} else {
+		err = s.ListAll(sCmd.configOverrides.Context.Namespace, sCmd.opts, outputPath)
+		if err != nil {
+			return fmt.Errorf("listing resources: %v", err)
+		}
 	}
 	return nil
 }

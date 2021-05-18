@@ -90,17 +90,14 @@ func (s *Scanner) WriteCaps(namespace string, opts metav1.ListOptions, outDir st
 
 func (s *Scanner) ListAll(namespace string, opts metav1.ListOptions, outDir string) error {
 
-	// kubectl get po -o jsonpath='{range .items[*]}{range .metadata.ownerReferences[*]}{"\""}{.kind}{"\",\n"}{end}{end}' --all-namespaces | sort | uniq
+	// ownedKindsToSkip represents a kind which is owned by another kube object which should
+	// be skipped over (i.e. do not include in scan results). As of 5/17/21 the only kind
+	// to skip is a Job that is owned by a CronJob.
+	// NOTE: The following command can be used to determine what pods have a owner reference and display the owner:
+	//    kubectl get po -o jsonpath='{range .items[*]}{range .metadata.ownerReferences[*]}{"\""}{.kind}{"\",\n"}{end}{end}' --all-namespaces | sort | uniq
+	// Example command results: "CatalogSource", "ConfigMap", "DaemonSet", "Job", "Node", "ReplicaSet", "StatefulSet"
 	ownedKindsToSkip := map[string]*stringset.StringSet{
-		"Pod": stringset.New(
-			"ReplicationController",
-			"ReplicaSet",
-			"StatefulSet",
-			"DaemonSet",
-			"Job",
-		),
-		"ReplicaSet": stringset.New("Deployment"),
-		"Job":        stringset.New("CronJob"),
+		"Job": stringset.New("CronJob"),
 	}
 
 	for name, client := range s.resourceClients {

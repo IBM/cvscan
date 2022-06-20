@@ -102,9 +102,12 @@ func (sCmd *scanCmd) run(args []string) error {
 func (sCmd *scanCmd) getClusterConfig() (*rest.Config, error) {
 	// First, try in-cluster
 	config, err := rest.InClusterConfig()
-	if err == nil {
+	//if no error and kubeconfig parm isn't set return config we found
+	//otherwise if we aren't in cluster or they do have a kubeconfig we want to use it
+	if err == nil && sCmd.kubeconfig == "" {
 		return config, nil
-	} else if err == rest.ErrNotInCluster {
+
+	} else if err == rest.ErrNotInCluster || sCmd.kubeconfig != "" {
 		// Next, try out-of-cluster
 		loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
 		loadingRules.ExplicitPath = sCmd.kubeconfig

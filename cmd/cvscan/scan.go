@@ -100,17 +100,25 @@ func (sCmd *scanCmd) run(args []string) error {
 }
 
 func (sCmd *scanCmd) getClusterConfig() (*rest.Config, error) {
-	// First, try in-cluster
+
+	//use kubeconfig flag if present
+	if sCmd.kubeconfig != "" {
+		loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+		loadingRules.ExplicitPath = sCmd.kubeconfig
+		kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &sCmd.configOverrides)
+		return kubeConfig.ClientConfig()
+	}
+	//if no kubeconfig flag, check if in cluster
+	//otherwise load from default config path
 	config, err := rest.InClusterConfig()
 	if err == nil {
 		return config, nil
 	} else if err == rest.ErrNotInCluster {
-		// Next, try out-of-cluster
 		loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-		loadingRules.ExplicitPath = sCmd.kubeconfig
 		kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &sCmd.configOverrides)
 		return kubeConfig.ClientConfig()
 	} else {
 		return nil, err
 	}
+
 }

@@ -8,8 +8,7 @@ script:
 before_deploy:
   - make binaries
   - sha256sum cvscan-*.tar.gz > checksums.sha256
-  - rvm $(travis_internal_ruby) --fuzzy do ruby -S gem install multipart-post -v 2.1.1
-
+  
 deploy:
   - provider: releases
     api_key: $GITHUB_TOKEN

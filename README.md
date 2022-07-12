@@ -1,3 +1,5 @@
+[![Build Status](https://app.travis-ci.com/IBM/cvscan.svg?branch=master)](https://app.travis-ci.com/IBM/cvscan)
+
 ## cvscan
 
 `cvscan` is a utility that takes snapshots of resources running in a Kubernetes

@@ -6,7 +6,7 @@
 cluster.
 
 ## Build
-1. Prerequisites: [`go` 1.13+](https://golang.org/dl/),
+1. Prerequisites: [`go` 1.19+](https://golang.org/dl/),
    [`make`](https://www.gnu.org/software/make/)
 1. `make build` will build and put a `cvscan` executable in the current directory or `make
    install` to build the executable and put it in `$GOBIN`.

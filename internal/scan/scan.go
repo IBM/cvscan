@@ -2,9 +2,9 @@ package scan
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -28,7 +28,7 @@ import (
 	"k8s.io/helm/pkg/proto/hapi/version"
 	aggregatorclientsetscheme "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme"
 
-	"github.ibm.com/certauto/cvscan/pkg/stringset"
+	"github.com/IBM/cvscan/pkg/stringset"
 )
 
 type Scanner struct {
@@ -82,7 +82,7 @@ func (s *Scanner) WriteCaps(namespace string, opts metav1.ListOptions, outDir st
 	if err != nil {
 		return fmt.Errorf("marshaling capabilities to JSON: %v", err)
 	}
-	if err := ioutil.WriteFile(filepath.Join(outDir, "caps.json"), b, os.ModePerm); err != nil {
+	if err := os.WriteFile(filepath.Join(outDir, "caps.json"), b, os.ModePerm); err != nil {
 		return err
 	}
 	return nil
@@ -110,7 +110,7 @@ func (s *Scanner) ListAll(namespace string, opts metav1.ListOptions, outDir stri
 			req.Param("labelSelector", opts.LabelSelector)
 		}
 
-		err := req.Do().Into(l)
+		err := req.Do(context.Background()).Into(l)
 
 		// Ignore MCM resource errors because they require an additional secret
 		// to be provided in the request.
@@ -158,7 +158,7 @@ func (s *Scanner) ListAll(namespace string, opts metav1.ListOptions, outDir stri
 				return fmt.Errorf("creating YAML for %s: %v", key, err)
 			}
 
-			err = ioutil.WriteFile(filepath.Join(outDir, key), y, os.ModePerm)
+			err = os.WriteFile(filepath.Join(outDir, key), y, os.ModePerm)
 			if err != nil {
 				return err
 			}
@@ -201,7 +201,7 @@ func (s *Scanner) getAllResources() (map[string]*rest.RESTClient, error) {
 
 		config := *s.config
 		config.GroupVersion = &gv
-		config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
+		config.NegotiatedSerializer = serializer.WithoutConversionCodecFactory{CodecFactory: scheme.Codecs}
 		config.APIPath = "/apis"
 		if len(gv.Group) == 0 {
 			config.APIPath = "/api"

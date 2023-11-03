@@ -10,8 +10,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.ibm.com/certauto/cvscan/internal/scan"
-	"github.ibm.com/certauto/cvscan/pkg/version"
+	"github.com/IBM/cvscan/internal/scan"
+	"github.com/IBM/cvscan/pkg/version"
 )
 
 type scanCmd struct {

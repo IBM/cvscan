@@ -1,31 +1,29 @@
 package scan
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/ghodss/yaml"
+	"helm.sh/helm/v3/pkg/chartutil"
 	apiextensionsclientsetscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"k8s.io/client-go/rest"
-	"k8s.io/helm/pkg/chartutil"
-	"k8s.io/helm/pkg/proto/hapi/version"
 	aggregatorclientsetscheme "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme"
 
 	"github.com/IBM/cvscan/pkg/stringset"
@@ -235,15 +233,17 @@ func (s *Scanner) getAllResources() (map[string]*rest.RESTClient, error) {
 }
 
 func (s *Scanner) getCapabilities() (*chartutil.Capabilities, error) {
-	// Copied from k8s.io/helm/pkg/tiller/release_server.go
-
 	c := &chartutil.Capabilities{}
 
 	sv, err := s.clientset.ServerVersion()
 	if err != nil {
 		return c, fmt.Errorf("server version: %v", err)
 	}
-	c.KubeVersion = sv
+	c.KubeVersion = chartutil.KubeVersion{
+		Version: fmt.Sprintf("v%s.%s.0", sv.Major, sv.Minor),
+		Major:   sv.Major,
+		Minor:   sv.Minor,
+	}
 
 	groups, err := s.clientset.ServerGroups()
 	if err != nil {
@@ -255,36 +255,12 @@ func (s *Scanner) getCapabilities() (*chartutil.Capabilities, error) {
 	}
 
 	versions := metav1.ExtractGroupVersions(groups)
-	vs := chartutil.NewVersionSet(versions...)
+	// use a set to get unique items
+	versionsAsSet := sets.New(versions...)
+	// get a sorted list and add the items to VersionSet, which is really just a string slice
+	vs := chartutil.VersionSet{}
+	vs = append(vs, sets.List(versionsAsSet)...)
 	c.APIVersions = vs
-
-	// Fail fast if Tiller doesn't exist because `helm version` hangs.
-	lsc := exec.Command("helm", "ls", "--tls")
-	err = lsc.Run()
-	if err != nil {
-		lsc := exec.Command("helm", "ls")
-		err = lsc.Run()
-		if err != nil {
-			return c, nil
-		}
-	}
-
-	cmd := exec.Command("helm", "version", "--tls", "-s", "--template", "{{.Server.SemVer}}")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err = cmd.Run()
-	if err != nil {
-		cmd = exec.Command("helm", "version", "-s", "--template", "{{.Server.SemVer}}")
-		cmd.Stdout = &out
-		err = cmd.Run()
-		if err != nil {
-			log.Println("Info: Tiller is unavailable in this cluster, so the Tiller version cannot be determined (cvscan)")
-			return c, nil
-		}
-	}
-	c.TillerVersion = &version.Version{
-		SemVer: out.String(),
-	}
 
 	return c, nil
 }

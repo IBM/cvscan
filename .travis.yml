@@ -1,6 +1,6 @@
 language: go
 go:
-  - "1.19.x"
+  - "1.22.x"
 
 script:
   - make build test
